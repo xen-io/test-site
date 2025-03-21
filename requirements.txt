@@ -1,1 +1,4 @@
-fastapi==0.115.8
+fastapi==0.115.11
+Faker==37.0.2
+pandas==2.2.3
+asyncpg==0.30.0
