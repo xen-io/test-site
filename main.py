@@ -11,11 +11,11 @@ import os
 
 data = {}
 
-with open('index.html') as f:
+with open('pages/index.html') as f:
     index_html = f.read()
-with open('owners.html') as f:
+with open('pages/owners.html') as f:
     owners_html = f.read()
-with open('animals.html') as f:
+with open('pages/animals.html') as f:
     animals_html = f.read()
 
 app = FastAPI()
