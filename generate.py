@@ -14,7 +14,7 @@ fake = Faker('ru_RU')
 
 def gen_owner():
     sex = random.randint(0, 1)
-    out = {
+    return {
         'name': fake.first_name_female() if sex else fake.first_name_male(),
         'last_name': fake.last_name_female() if sex else fake.last_name_male(),
         'middle_name': fake.middle_name_female() if sex else fake.middle_name_male(),
@@ -22,7 +22,6 @@ def gen_owner():
         'birthday': fake.date_of_birth(minimum_age=21, maximum_age=67).strftime('%d.%m.%Y'),
         'home': random.randint(1, 145)
     }
-    return out
 
 
 def gen_animal(owner_id):
