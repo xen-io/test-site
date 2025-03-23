@@ -21,30 +21,55 @@ with open('pages/animals.html') as f:
 app = FastAPI()
 
 
-async def owners_frame():
-    query = '''SELECT * FROM owners'''
-    # ответ на запрос query засовывается в frame типа DataFrame
+async def client_animals_query(
+        aid: int | str | None = None,
+        owner: str | None = None,
+        breed: str | None = None,
+        sex: str | None = None,
+        birthday: str | None = None,
+        reg_date: str | None = None,
+        description: str | None = None):
+
+    query = '''
+    SELECT
+        animals.id, owners.last_name || ' ' || owners.name || ' ' || owners.middle_name,
+        animals.nick, animals.breed,
+        CASE
+            WHEN animals.sex = true THEN 'Ж'
+            ELSE 'М'
+        END AS sex, animals.birthday,
+        animals.reg_date, animals.description
+    FROM
+        animals LEFT JOIN owners ON animals.owner = owners.id'''
+
     frame = pd.DataFrame(await data['connection'].fetch(query))
-    frame.columns = ['ID', 'Имя', 'Фамилия', 'Отчество', 'Пол', 'Дата рождения', 'Номер дома']
-    # форматируется колонка Пол
-    frame['Пол'] = frame['Пол'].apply(lambda x: 'Ж' if x else 'М')
+    frame.columns = ['ID', 'ФИО Владельца', 'Кличка', 'Тип', 'Пол', 'Дата рождения', 'Дата регистрации', 'Описание']
+
     return frame
 
 
-async def animals_frame():
+async def client_owners_query(
+        oid: int | str | None = None,
+        name: str | None = None,
+        lastname: str | None = None,
+        middlename: str | None = None,
+        sex: str | None = None,
+        birthday: str | None = None,
+        home: int | None = None):
+
     query = '''
     SELECT
-        animal_id, CONCAT(owner_lastname, ' ', owner_name, ' ', owner_middlename),
-        animal_nick, animal_type,
-        animal_sex, animal_birthday,
-        animal_reg_date, animal_description
+        id, name, last_name, middle_name,
+        CASE
+            WHEN owners.sex = true THEN 'Ж'
+            ELSE 'М'
+        END AS sex, birthday, home
     FROM
-        animals LEFT JOIN owners ON animals.owner_id = owners.owner_id'''
-    # ответ на запрос query засовывается в frame типа DataFrame
+        owners'''
+
     frame = pd.DataFrame(await data['connection'].fetch(query))
-    frame.columns = ['ID', 'ФИО Владельца', 'Кличка', 'Тип', 'Пол', 'Дата рождения', 'Дата регистрации', 'Описание']
-    # форматируется колонка Пол
-    frame['Пол'] = frame['Пол'].apply(lambda x: 'Ж' if x else 'М')
+    frame.columns = ['ID', 'Имя', 'Фамилия', 'Отчество', 'Пол', 'Дата рождения', 'Номер дома']
+
     return frame
 
 
@@ -59,10 +84,27 @@ async def index():
 
 
 @app.get('/owners', response_class=HTMLResponse)
-async def owners():
-    return owners_html.replace('TABLE_DATA', (await owners_frame()).to_html(index=False, justify='center'))
+async def owners(
+        oid: int | str | None = None,
+        name: str | None = None,
+        lastname: str | None = None,
+        middlename: str | None = None,
+        sex: str | None = None,
+        birthday: str | None = None,
+        home: int | None = None):
+    frame = await client_owners_query(oid, name, lastname, middlename, sex, birthday, home)
+    return owners_html.replace('TABLE_DATA', frame.to_html(index=False, justify='center'))
 
 
 @app.get('/animals', response_class=HTMLResponse)
-async def animals():
-    return animals_html.replace('TABLE_DATA', (await animals_frame()).to_html(index=False, justify='center'))
+async def animals(
+        aid: int | str | None = None,
+        owner: str | None = None,
+        breed: str | None = None,
+        sex: str | None = None,
+        birthday: str | None = None,
+        reg_date: str | None = None,
+        description: str | None = None):
+    frame = await client_animals_query(aid, owner, breed, sex, birthday, reg_date, description)
+    return animals_html.replace('TABLE_DATA', frame.to_html(index=False, justify='center'))
+

@@ -41,17 +41,23 @@ def gen_animal(owner_id):
 async def gen_owners(conn, owner_count):
     for _ in range(owner_count):
         owner = list(gen_owner().values())
-        await conn.execute('INSERT INTO owners (owner_name, owner_lastname, owner_middlename, owner_sex, owner_birthday, owner_home) VALUES (\'{}\', \'{}\', \'{}\', {}, \'{}\', {});'.format(*owner))
+        query = 'INSERT INTO owners (name, last_name, middle_name, sex, birthday, home) VALUES (\'{}\', \'{}\', \'{}\', {}, \'{}\', {});'.format(*owner)
+        print(query)
+        await conn.execute(query)
 
 
 async def gen_animals(conn, owner_count, animal_count):
     for i in range(animal_count):
         animal = list(gen_animal(i + 1 if i + 1 <= owner_count else random.randint(1, owner_count)).values())
-        await conn.execute('''INSERT INTO animals (owner_id, animal_nick, animal_type, animal_sex, animal_birthday, animal_reg_date, animal_description) VALUES ({}, \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\');'''.format(*animal))
+        query = 'INSERT INTO animals (owner, nick, breed, sex, birthday, reg_date, description) VALUES ({}, \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\');'.format(*animal)
+        print(query)
+        await conn.execute(query)
 
 
 async def main():
     conn = await asyncpg.connect(host=os.getenv('DHOST'), port=os.getenv('DPORT'), user=os.getenv('DUSER'), database=os.getenv('DNAME'))
+
+    await conn.execute('SET datestyle = dmy;')
 
     await gen_owners(conn, 30)
     await gen_animals(conn, 30, 500)

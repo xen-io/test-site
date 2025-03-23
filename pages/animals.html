@@ -4,6 +4,42 @@
 		<p>now it's animals</p>
 		<a href="/"><button type="button">Main page</button></a>
 		<a href="/owners"><button type="button">-- Owners --</button></a>
+		<form action="/animals" method="GET">
+			<div>
+				<label for="aid">ID Животного</label>
+				<input name="aid" id="aid" value=""/>
+			</div>
+			<div>
+				<label for="owner">ФИО Владельца</label>
+				<input name="owner" id="owner" value=""/>
+			</div>
+			<div>
+				<label for="breed">Тип</label>
+				<input name="breed" id="breed" value=""/>
+			</div>
+			<div>
+				<label for="sex">Пол</label>
+				<select name="sex" id="sex">
+					<option value=0>Мужской</option>
+					<option value=1>Женский</option>
+				</select>
+			</div>
+			<div>
+				<label for="birthday">Дата рождения</label>
+				<input name="birthday" id="birthday" value=""/>
+			</div>
+			<div>
+				<label for="reg_date">Дата регистрации</label>
+				<input name="reg_date" id="reg_date" value=""/>
+			</div>
+			<div>
+				<label for="description">Описание</label>
+				<input name="description" id="description" value=""/>
+			</div>
+			<div>
+				<input type="submit" value="Поиск">
+			</div>
+		</form>
 		TABLE_DATA
 	</body>
 </html>
