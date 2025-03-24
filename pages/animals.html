@@ -7,39 +7,48 @@
 		<form action="/animals" method="GET">
 			<div>
 				<label for="aid">ID</label>
-				<input name="aid" id="aid" value=""/>
+				<input name="aid" id="aid" value="${ID_VALUE}"/>
 			</div>
 			<div>
 				<label for="owner">ФИО Владельца</label>
-				<input name="owner" id="owner" value=""/>
+				<input name="owner" id="owner" value="${OWNER_VALUE}"/>
+			</div>
+			<div>
+				<label for="nick">Кличка</label>
+				<input name="nick" id="nick" value="${NICK_VALUE}"/>
 			</div>
 			<div>
 				<label for="breed">Тип</label>
-				<input name="breed" id="breed" value=""/>
+				<input name="breed" id="breed" value="${BREED_VALUE}"/>
 			</div>
 			<div>
 				<label for="sex">Пол</label>
 				<select name="sex" id="sex">
-					<option value=0>Мужской</option>
-					<option value=1>Женский</option>
+					<option value=-1 ${SEX_-1_SELECT}></option>
+					<option value=0 ${SEX_0_SELECT}>Мужской</option>
+					<option value=1 ${SEX_1_SELECT}>Женский</option>
 				</select>
 			</div>
 			<div>
 				<label for="birthday">Дата рождения</label>
-				<input name="birthday" id="birthday" value=""/>
+				<input name="birthday" id="birthday" value="${BIRTHDAY_VALUE}"/>
 			</div>
 			<div>
 				<label for="reg_date">Дата регистрации</label>
-				<input name="reg_date" id="reg_date" value=""/>
+				<input name="reg_date" id="reg_date" value="${REG_DATE_VALUE}"/>
 			</div>
 			<div>
 				<label for="description">Описание</label>
-				<input name="description" id="description" value=""/>
+				<input name="description" id="description" value="${DESC_VALUE}"/>
 			</div>
 			<div>
 				<input type="submit" value="Поиск">
+				<a href="/animals"><button type="button">Сбросить фильтр</button></a>
 			</div>
 		</form>
-		TABLE_DATA
+		<div>
+			<i><small>${QUERY_INFO}</small></i>
+		</div>
+		${TABLE_DATA}
 	</body>
 </html>
