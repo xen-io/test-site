@@ -31,12 +31,13 @@ app = FastAPI()
 #   - подстановку получше сделать (возможно через Template)
 # - хотя бы как нибудь избавится от sql injection уязвимости
 # - добавить проверки на формат ввода пользователя (даты и времени)
+# - подключить джинджа для динамического формирования страниц без костылей :)
 
 
 async def client_animals_query(query):
     ''' Выполняет sql запрос в таблицу animals и возвращает pd.DataFrame'''
 
-    sql_query = (
+    sql_select = (
         '''
         SELECT
             animals.id, owners.last_name || ' ' || owners.name || ' ' || owners.middle_name AS fio,
@@ -46,49 +47,54 @@ async def client_animals_query(query):
                 ELSE 'М'
             END AS sex, animals.birthday,
             animals.reg_date, animals.description
-        FROM
-            animals LEFT JOIN owners ON animals.owner = owners.id
         '''
     )
-    # есть разделение на sql_query и sql_conditions для дальнейших запросов на получение вариантов для выпадающих списков
-    sql_conditions = ' WHERE '
+    # есть разделение для дальнейших запросов на получение вариантов для выпадающих списков
+    sql_from = ' FROM animals LEFT JOIN owners ON animals.owner = owners.id '
+    sql_where = ' WHERE '
 
     # SQL INJECTION BOIIIIII
     if query['aid']:
-        sql_conditions += f' (animals.id = {query["aid"]}) AND '
+        sql_where += f' (animals.id = {query["aid"]}) AND '
     if query['breed']:
-        sql_conditions += f' (UPPER(animals.breed) = REPLACE(UPPER(\'{query["breed"]}\'), \' \', \'\')) AND '
+        sql_where += f' (UPPER(animals.breed) = REPLACE(UPPER(\'{query["breed"]}\'), \' \', \'\')) AND '
 
     if query['owner']:
-        sql_conditions += f'(UPPER(owners.last_name || \' \' || owners.name || \' \' || owners.middle_name) LIKE REPLACE(UPPER(\'%{query["owner"]}%\'), \' \', \'\')) AND '
+        sql_where += f'(UPPER(owners.last_name || \' \' || owners.name || \' \' || owners.middle_name) LIKE REPLACE(UPPER(\'%{query["owner"]}%\'), \' \', \'\')) AND '
 
     if query['nick']:
-        sql_conditions += f' (UPPER(animals.nick) = REPLACE(UPPER(\'{query["nick"]}\'), \' \', \'\')) AND '
+        sql_where += f' (UPPER(animals.nick) = REPLACE(UPPER(\'{query["nick"]}\'), \' \', \'\')) AND '
 
     if query['sex'] == '1':
-        sql_conditions += ' (animals.sex = true) AND '
+        sql_where += ' (animals.sex = true) AND '
     elif query['sex'] == '0':
-        sql_conditions += ' (animals.sex = false) AND '
+        sql_where += ' (animals.sex = false) AND '
 
     if query['birthday']:
-        sql_conditions += f'(animals.birthday = DATE(\'{query["birthday"]}\')) AND '
+        sql_where += f'(animals.birthday = DATE(\'{query["birthday"]}\')) AND '
 
     if query['reg_date']:
-        sql_conditions += f'(animals.reg_date = TIMESTAMP(\'{query["reg_date"]}\')) AND '
+        sql_where += f'(animals.reg_date = TIMESTAMP(\'{query["reg_date"]}\')) AND '
 
     if query['description']:
-        sql_conditions += f'(UPPER(animals.description) LIKE REPLACE(UPPER(\'%{query["description"]}%\'), \' \', \'\')) AND '
+        sql_where += f'(UPPER(animals.description) LIKE REPLACE(UPPER(\'%{query["description"]}%\'), \' \', \'\')) AND '
 
-    sql_conditions = sql_conditions.rstrip(' AND ').rstrip(' WHERE ')
+    sql_where = sql_where.rstrip(' AND ').rstrip(' WHERE ')
 
     # доп функционал для отображения query time на каждой странице с запросами
     before = time.time()
-    frame = pd.DataFrame(await data['connection'].fetch(sql_query + sql_conditions))
+    frame = pd.DataFrame(await data['connection'].fetch(sql_select + sql_from + sql_where))
     query['_time'] = time.time() - before
 
     # когда ничего по запросу не находится таблица становится размером 0x0, а frame.columns ругается на присвоение такой таблицы 8 имен колонок
     if len(frame.columns == 8):
         frame.columns = ['ID', 'ФИО Владельца', 'Кличка', 'Тип', 'Пол', 'Дата рождения', 'Дата регистрации', 'Описание']
+
+        query['_breeds'] = await data['connection'].fetch('SELECT DISTINCT(animals.breed) ' + sql_from + sql_where)
+        query['_sexes'] = await data['connection'].fetch('SELECT DISTINCT(animals.sex) ' + sql_from + sql_where)
+    else:
+        query['_breeds'] = []
+        query['_sexes'] = []
 
     return frame
 
@@ -96,7 +102,7 @@ async def client_animals_query(query):
 async def client_owners_query(query):
     ''' Выполняет sql запрос в таблицу owners и возвращает pd.DataFrame'''
 
-    sql_query = (
+    sql_select = (
         '''
         SELECT
             id, name, last_name, middle_name,
@@ -104,44 +110,47 @@ async def client_owners_query(query):
                 WHEN owners.sex = true THEN 'Ж'
                 ELSE 'М'
             END AS sex, birthday, home
-        FROM
-            owners
         '''
     )
 
-    sql_query += ' WHERE '
+    sql_from = ' FROM owners '
+    sql_where = ' WHERE '
 
     if query['oid']:
-        sql_query += f' (id = \'{query["oid"]}\') AND '
+        sql_where += f' (id = \'{query["oid"]}\') AND '
 
     if query['name']:
-        sql_query += f' (name LIKE \'%{query["name"]}%\') AND '
+        sql_where += f' (name LIKE \'%{query["name"]}%\') AND '
 
     if query['last_name']:
-        sql_query += f' (last_name LIKE \'%{query["last_name"]}%\') AND '
+        sql_where += f' (last_name LIKE \'%{query["last_name"]}%\') AND '
 
     if query['middle_name']:
-        sql_query += f' (middle_name LIKE \'%{query["middle_name"]}%\') AND '
+        sql_where += f' (middle_name LIKE \'%{query["middle_name"]}%\') AND '
 
     if query['sex'] == '1':
-        sql_query += ' (sex = true) AND '
+        sql_where += ' (sex = true) AND '
     elif query['sex'] == '0':
-        sql_query += ' (sex = false) AND '
+        sql_where += ' (sex = false) AND '
 
     if query['birthday']:
-        sql_query += f'(birthday = DATE(\'{query["birthday"]}\')) AND '
+        sql_where += f'(birthday = DATE(\'{query["birthday"]}\')) AND '
 
     if query['home']:
-        sql_query += f' (home = \'{query["home"]}\') AND '
+        sql_where += f' (home = \'{query["home"]}\') AND '
 
-    sql_query = sql_query.rstrip(' AND ').rstrip(' WHERE ')
+    sql_where = sql_where.rstrip(' AND ').rstrip(' WHERE ')
 
     before = time.time()
-    frame = pd.DataFrame(await data['connection'].fetch(sql_query))
+    frame = pd.DataFrame(await data['connection'].fetch(sql_select + sql_from + sql_where))
     query['_time'] = time.time() - before
 
     if len(frame.columns == 7):
         frame.columns = ['ID', 'Имя', 'Фамилия', 'Отчество', 'Пол', 'Дата рождения', 'Номер дома']
+
+        query['_sexes'] = await data['connection'].fetch('SELECT DISTINCT(owners.sex) ' + sql_from + sql_where)
+    else:
+        query['_sexes'] = []
 
     return frame
 
@@ -150,7 +159,7 @@ def sub_option_vals(template, input, options, prefix):
     ''' Функция выставляет selected опцию в теге option в зависимости от выбранного значения ранее '''
     vals = options[:]
     if input in vals:
-        template = Template(template.safe_substitute({f'{prefix}_{input}_SELECT': 'selected'}))  # .replace(f'{prefix}_{input}_SELECT', 'selected')
+        template = Template(template.safe_substitute({f'{prefix}_{input}_SELECT': 'selected'}))
         vals.remove(input)
     return Template(template.safe_substitute({f'{prefix}_{v}_SELECT': '' for v in vals}))
 
