@@ -21,26 +21,21 @@ with open('pages/animals.html') as f:
 app = FastAPI()
 
 
-async def client_animals_query(
-        aid: int | str | None = None,
-        owner: str | None = None,
-        breed: str | None = None,
-        sex: str | None = None,
-        birthday: str | None = None,
-        reg_date: str | None = None,
-        description: str | None = None):
-
-    query = '''
-    SELECT
-        animals.id, owners.last_name || ' ' || owners.name || ' ' || owners.middle_name,
-        animals.nick, animals.breed,
-        CASE
-            WHEN animals.sex = true THEN 'Ж'
-            ELSE 'М'
-        END AS sex, animals.birthday,
-        animals.reg_date, animals.description
-    FROM
-        animals LEFT JOIN owners ON animals.owner = owners.id'''
+async def client_animals_query(aid='', owner='', breed='', sex='', birthday='', reg_date='', description=''):
+    query = (
+        '''
+        SELECT
+            animals.id, owners.last_name || ' ' || owners.name || ' ' || owners.middle_name,
+            animals.nick, animals.breed,
+            CASE
+                WHEN animals.sex = true THEN 'Ж'
+                ELSE 'М'
+            END AS sex, animals.birthday,
+            animals.reg_date, animals.description
+        FROM
+            animals LEFT JOIN owners ON animals.owner = owners.id
+        '''
+    )
 
     frame = pd.DataFrame(await data['connection'].fetch(query))
     frame.columns = ['ID', 'ФИО Владельца', 'Кличка', 'Тип', 'Пол', 'Дата рождения', 'Дата регистрации', 'Описание']
@@ -48,24 +43,19 @@ async def client_animals_query(
     return frame
 
 
-async def client_owners_query(
-        oid: int | str | None = None,
-        name: str | None = None,
-        lastname: str | None = None,
-        middlename: str | None = None,
-        sex: str | None = None,
-        birthday: str | None = None,
-        home: int | None = None):
-
-    query = '''
-    SELECT
-        id, name, last_name, middle_name,
-        CASE
-            WHEN owners.sex = true THEN 'Ж'
-            ELSE 'М'
-        END AS sex, birthday, home
-    FROM
-        owners'''
+async def client_owners_query(oid='', name='', last_name='', middle_name='', sex='', birthday='', home=''):
+    query = (
+        '''
+        SELECT
+            id, name, last_name, middle_name,
+            CASE
+                WHEN owners.sex = true THEN 'Ж'
+                ELSE 'М'
+            END AS sex, birthday, home
+        FROM
+            owners
+        '''
+    )
 
     frame = pd.DataFrame(await data['connection'].fetch(query))
     frame.columns = ['ID', 'Имя', 'Фамилия', 'Отчество', 'Пол', 'Дата рождения', 'Номер дома']
@@ -84,27 +74,13 @@ async def index():
 
 
 @app.get('/owners', response_class=HTMLResponse)
-async def owners(
-        oid: int | str | None = None,
-        name: str | None = None,
-        lastname: str | None = None,
-        middlename: str | None = None,
-        sex: str | None = None,
-        birthday: str | None = None,
-        home: int | None = None):
-    frame = await client_owners_query(oid, name, lastname, middlename, sex, birthday, home)
+async def owners(oid='', name='', last_name='', middle_name='', sex='', birthday='', home=''):
+    frame = await client_owners_query(oid, name, last_name, middle_name, sex, birthday, home)
     return owners_html.replace('TABLE_DATA', frame.to_html(index=False, justify='center'))
 
 
 @app.get('/animals', response_class=HTMLResponse)
-async def animals(
-        aid: int | str | None = None,
-        owner: str | None = None,
-        breed: str | None = None,
-        sex: str | None = None,
-        birthday: str | None = None,
-        reg_date: str | None = None,
-        description: str | None = None):
+async def animals(aid='', owner='', breed='', sex='', birthday='', reg_date='', description=''):
     frame = await client_animals_query(aid, owner, breed, sex, birthday, reg_date, description)
     return animals_html.replace('TABLE_DATA', frame.to_html(index=False, justify='center'))
 
