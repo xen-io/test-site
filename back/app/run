@@ -1,0 +1,2 @@
+#!/bin/bash
+BACKEND_CONFIG=config.json fastapi dev app.py
