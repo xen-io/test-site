@@ -1,12 +1,13 @@
 import hashlib
 
-from fastapi import status
-from sqlalchemy import select, update
 import jwt
 
+from fastapi import status
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import NoResultFound
+from sqlalchemy import select, update
+
 from jwt.exceptions import DecodeError
 from fastapi.exceptions import HTTPException
 
@@ -52,11 +53,17 @@ async def verify_token(secret, token):
 
 
 async def verify_admin(engine, user_id):
-    async with engine.connect() as conn:
-        result = await conn.execute(select(User.is_admin).where(
-            User.id == user_id
-        ))
-        result = result.one()
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(select(User.is_admin).where(
+                User.id == user_id
+            ))
+            result = result.one()
+    except NoResultFound:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            'Invalid Token'
+        )
     if not bool(result[0]):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,

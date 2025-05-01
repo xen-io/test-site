@@ -4,8 +4,9 @@ import uuid
 
 from fastapi import FastAPI, status
 from sqlalchemy import select, insert, delete
-from sqlalchemy.exc import IntegrityError, NoResultFound
+
 from fastapi.exceptions import HTTPException
+from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from db import User
 from data import (LoginData, RegisterData, ForgotPasswordData,
@@ -78,7 +79,7 @@ async def post_forgot(forgot_password_data: ForgotPasswordData):
     except NoResultFound:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            'User does not exists'
+            'User does not exist'
         )
     token = gen_jwt(config['jwt_secret'], {'forgot': str(result[0])})
     # должен email отправлятся (попозже доделаю)
