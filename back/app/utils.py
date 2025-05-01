@@ -1,5 +1,6 @@
 import hashlib
 import datetime
+import logging
 
 import jwt
 
@@ -13,6 +14,8 @@ from jwt.exceptions import DecodeError
 from fastapi.exceptions import HTTPException
 
 from db import AuthUser
+
+log = logging.getLogger(__name__)
 
 
 def create_engine(config):
@@ -47,6 +50,7 @@ async def verify_token(secret, token):
             algorithms='HS256'
         )
     except (DecodeError, KeyError):
+        log.error('invalid token provided')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             'Invalid token'
@@ -61,11 +65,13 @@ async def verify_admin(engine, user_id):
             ))
             result = result.one()
     except NoResultFound:
+        log.error('invalid token provided')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             'Invalid Token'
         )
     if not bool(result[0]):
+        log.error(f'turns out {user_id} is not an admin')
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             'Forbidden'
@@ -84,11 +90,13 @@ async def update_user(engine, id, data):
             await conn.commit()
             return result
     except NoResultFound:
+        log.error(f'user cannot be updated because he does not exist: {id}')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             'User does not exists'
         )
     except Exception:
+        log.error(f'user cannot be updated because wrong fields provided: {data}')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             'Unknown fields'

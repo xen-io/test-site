@@ -2,10 +2,10 @@ import os
 import json
 import uuid
 import datetime
+import logging
 
 from fastapi import FastAPI, status
 from sqlalchemy import select, insert, delete
-from sqlalchemy import MetaData
 
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError, NoResultFound
@@ -23,16 +23,20 @@ with open(os.getenv('BACKEND_CONFIG')) as f:
 
 engine = create_engine(config)
 app = FastAPI()
-meta = MetaData()
+
+logging.basicConfig(level=logging.INFO, filename=config['logs'])
+log = logging.getLogger(__name__)
 
 
 @app.on_event('shutdown')
 async def shutdown():
+    log.info('fastapi is shutting down')
     await engine.dispose()
 
 
 @app.on_event('startup')
 async def startup():
+    log.info('creating sql tables')
     async with engine.connect() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.commit()
@@ -50,20 +54,23 @@ async def post_login(login_data: LoginData):
             ))
         result = result.one()
     except NoResultFound:
+        log.error(f'invalid credentials to log in: {login_data}')
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             'Invalid credentials'
         )
+    log.info(f'{result[0]} is logged in')
     return TokenData(token=gen_jwt(config['jwt_secret'], {'as': str(result[0])}))
 
 
 @app.post('/auth/register')
 async def post_register(register_data: RegisterData):
     pass_hash = hash_password(register_data.password)
+    id = uuid.uuid4()
     try:
         async with engine.connect() as conn:
             await conn.execute(insert(AuthUser).values(
-                id=uuid.uuid4(),
+                id=id,
                 first_name=register_data.first_name,
                 last_name=register_data.last_name,
                 middle_name=register_data.middle_name,
@@ -78,10 +85,12 @@ async def post_register(register_data: RegisterData):
             ))
             await conn.commit()
     except IntegrityError:
+        log.error(f'invalid credentials to register: {register_data}')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             'Invalid credentials'
         )
+    log.info(f'{id} is registered')
     return StatusData(status='OK')
 
 
@@ -95,6 +104,7 @@ async def post_forgot(forgot_password_data: ForgotPasswordData):
             ))
             result = result.one()
     except NoResultFound:
+        log.error(f'cannot recover a password for user that does not exist: {forgot_password_data.email}')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             'User does not exist'
@@ -102,6 +112,7 @@ async def post_forgot(forgot_password_data: ForgotPasswordData):
     token = gen_jwt(config['jwt_secret'], {'forgot': str(result[0])})
     # должен email отправлятся (попозже доделаю)
     print('forgot_token:', token, sep='\n')
+    log.info(f'sent password recovery email for: {forgot_password_data.email}')
     return StatusData(status='OK')
 
 
@@ -112,6 +123,7 @@ async def post_change(change_password_data: ChangePasswordData):
 
     await update_user(engine, user_id, {'hashed_password': pass_hash})
 
+    log.info(f'{user_id} changed his password')
     return StatusData(status='OK')
 
 
@@ -128,10 +140,12 @@ async def post_delete_user(delete_user_data: DeleteUserData):
             ))
             await conn.commit()
     except NoResultFound:
+        log.error(f'{user_id} cannot delete user that does not exist: {delete_user_data.id}')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             'User does not exists'
         )
+    log.info(f'{user_id} deleted user {delete_user_data.id}')
     return StatusData(status='OK')
 
 
@@ -143,6 +157,7 @@ async def post_edit_user(edit_user_data: EditUserData):
 
     await update_user(engine, edit_user_data.id, {edit_user_data.key: edit_user_data.value})
 
+    log.info(f'{user_id} edited user {edit_user_data.id}: key={edit_user_data.key} value={edit_user_data.value}')
     return StatusData(status='OK')
 
 
@@ -156,4 +171,5 @@ async def post_users(users_data: UsersData):
         result = await conn.execute(select(AuthUser))
 
     # сборка ответа
+    log.info(f'returning users for {user_id}')
     return [{k: v for k, v in zip(list(result.keys()), row)} for row in result]
