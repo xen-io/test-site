@@ -5,4 +5,3 @@ lib/
 lib64/
 __pycache__/
 pyvenv.cfg
-run
