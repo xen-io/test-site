@@ -1,4 +1,5 @@
 import hashlib
+import datetime
 
 import jwt
 
@@ -11,7 +12,7 @@ from sqlalchemy import select, update
 from jwt.exceptions import DecodeError
 from fastapi.exceptions import HTTPException
 
-from db import User
+from db import AuthUser
 
 
 def create_engine(config):
@@ -55,8 +56,8 @@ async def verify_token(secret, token):
 async def verify_admin(engine, user_id):
     try:
         async with engine.connect() as conn:
-            result = await conn.execute(select(User.is_admin).where(
-                User.id == user_id
+            result = await conn.execute(select(AuthUser.is_admin).where(
+                AuthUser.id == user_id
             ))
             result = result.one()
     except NoResultFound:
@@ -74,9 +75,12 @@ async def verify_admin(engine, user_id):
 async def update_user(engine, id, data):
     try:
         async with engine.connect() as conn:
-            result = await conn.execute(update(User).where(
-                User.id == id
+            result = await conn.execute(update(AuthUser).where(
+                AuthUser.id == id
             ).values(**data))
+            await conn.execute(update(AuthUser.updated_at).where(
+                AuthUser.id == id
+            ).values(datetime.datetime.now()))
             await conn.commit()
             return result
     except NoResultFound:

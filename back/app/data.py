@@ -5,8 +5,10 @@ from pydantic import BaseModel
 
 
 class RegisterData(BaseModel):
+    first_name: str
+    last_name: str
+    middle_name: str
     email: str
-    username: str
     password: str
 
 
@@ -35,8 +37,8 @@ class DeleteUserData(BaseModel):
 class EditUserData(BaseModel):
     token: str
     id: str
-    field: str
-    to: str | bool | int | None
+    key: str
+    value: str | bool | int | None
 
 
 class UsersData(BaseModel):
