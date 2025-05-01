@@ -1,0 +1,4 @@
+#!/bin/bash
+python -m venv --without-scm-ignore-files .
+. bin/activate
+pip install -r ../requirements.txt
