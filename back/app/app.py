@@ -137,14 +137,4 @@ async def post_users(users_data: UsersData):
         result = await conn.execute(select(User))
 
     # сборка ответа
-    answer = {}
-    for row in result.fetchall():
-        answer.update({row[0]: {k: v for k, v in zip([
-            'email',
-            'password',
-            'username',
-            'access_level',
-            'is_admin',
-            'is_verified'
-        ], row[1:])}})
-    return answer
+    return [{k: v for k, v in zip(list(result.keys()), row)} for row in result]
